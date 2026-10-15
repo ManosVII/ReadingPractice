@@ -840,3 +840,11 @@ body {
 .privacy-note { margin-top: 14px; font-size: .85rem; color: var(--text-lt); text-align: center; }
 .live-heard { min-height: 1.4em; margin-top: 8px; color: var(--text-lt); font-style: italic; text-align: center; }
 .record-btn:disabled { opacity: .45; cursor: not-allowed; }
+.engine-switch { margin-top: 14px; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: .9rem; color: var(--text-lt); }
+.engine-btn {
+  border: 2px solid var(--indigo-lt); background: var(--card); color: var(--text);
+  border-radius: 999px; padding: 6px 14px; font: inherit; font-weight: 800; cursor: pointer;
+}
+.engine-btn.active { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+.engine-btn:disabled { opacity: .45; cursor: not-allowed; }
+.whisper-status { margin-top: 8px; min-height: 1.2em; font-size: .85rem; color: var(--text-lt); text-align: center; }

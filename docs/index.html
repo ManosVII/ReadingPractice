@@ -12,6 +12,19 @@
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+  <script>
+    // Make the page cross-origin isolated (coi-sw.js) so Whisper can use
+    // several CPU cores; reload once after the service worker is installed.
+    if (!window.crossOriginIsolated && window.isSecureContext && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("coi-sw.js").then(() => {
+        try {
+          if (sessionStorage.getItem("coi-reloaded")) return;
+          sessionStorage.setItem("coi-reloaded", "1");
+        } catch { return; }
+        navigator.serviceWorker.ready.then(() => location.reload());
+      }).catch(() => {});
+    }
+  </script>
   <div id="app"></div>
   <script src="texts.js"></script>
   <script src="evaluator.js"></script>

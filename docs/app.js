@@ -32,14 +32,14 @@ const CLASS_HIERARCHY = [
 
 // Same per-grade criteria as main.py (matched by source_id prefix)
 const GRADE_CRITERIA = {
-  "a_":  { wpm_target:  45, w_spd: 0.15 },
-  "b_":  { wpm_target:  60, w_spd: 0.20 },
-  "g_":  { wpm_target:  75, w_spd: 0.25 },
-  "d_":  { wpm_target:  85, w_spd: 0.30 },
-  "e_":  { wpm_target:  95, w_spd: 0.35 },
-  "st_": { wpm_target: 110, w_spd: 0.35 },
+  "a_":  { wpm_target:  45, w_acc: 0.85, w_spd: 0.15, w_pun: 0.00 },
+  "b_":  { wpm_target:  60, w_acc: 0.75, w_spd: 0.20, w_pun: 0.05 },
+  "g_":  { wpm_target:  75, w_acc: 0.65, w_spd: 0.25, w_pun: 0.10 },
+  "d_":  { wpm_target:  85, w_acc: 0.60, w_spd: 0.30, w_pun: 0.10 },
+  "e_":  { wpm_target:  95, w_acc: 0.55, w_spd: 0.35, w_pun: 0.10 },
+  "st_": { wpm_target: 110, w_acc: 0.55, w_spd: 0.35, w_pun: 0.10 },
 };
-const DEFAULT_CRITERIA = { wpm_target: 80, w_spd: 0.30 };
+const DEFAULT_CRITERIA = { wpm_target: 80, w_acc: 0.60, w_spd: 0.30, w_pun: 0.10 };
 
 const ALL_TEXTS = window.TEXTS || [];
 const TEXT_BY_ID = new Map(ALL_TEXTS.map(t => [t.id, t]));
@@ -195,7 +195,7 @@ function renderProfiles() {
         <div id="auth-error" class="error-msg" style="display:none"></div>
         <div class="form-group"><label>Όνομα</label><input id="f-name" placeholder="π.χ. Μαρία" maxlength="40"/></div>
         <button class="btn btn-primary btn-lg" style="width:100%" id="btn-add-profile">Ξεκινάμε →</button>
-        <p class="privacy-note">Το ιστορικό μένει μόνο σε αυτόν τον υπολογιστή / browser.</p>
+        <p class="privacy-note">Το ιστορικό και η φωνή μένουν μόνο σε αυτόν τον υπολογιστή.</p>
       </div>
     </div>`;
 }
@@ -238,6 +238,7 @@ function selectProfile(pid) {
   if (!p) return;
   state.user = p;
   store.set("rp_current", p.id);
+  if (currentEngine() === "whisper") startWhisper();
   navigate("class-select");
 }
 
@@ -366,6 +367,7 @@ function renderTextSelect() {
 function renderExercise() {
   const t = state.currentText;
   if (!t) return '<p>Δεν επιλέχθηκε κείμενο.</p>';
+  const engine = currentEngine();
   return `
     <div class="section-header">
       <button class="btn-icon" id="btn-back">←</button>
@@ -390,29 +392,120 @@ function renderExercise() {
         <div class="timer-display${state.currentMode === "wpm" ? " wpm-timer" : ""}" id="timer-display">
           ${state.currentMode === "wpm" ? "1:00" : "0:00"}
         </div>
-        <button class="record-btn" id="record-btn"${SpeechRec ? "" : " disabled"}>🎙</button>
-        <span class="record-label" id="record-label">${SpeechRec
+        <button class="record-btn" id="record-btn"${canRecord(engine) ? "" : " disabled"}>🎙</button>
+        <span class="record-label" id="record-label">${canRecord(engine)
           ? "Πάτα για να ξεκινήσεις"
-          : "Χρειάζεται Google Chrome ή Microsoft Edge"}</span>
+          : "Αυτός ο browser δεν μπορεί να ηχογραφήσει. Δοκίμασε Google Chrome ή Microsoft Edge."}</span>
         <div class="live-heard" id="live-heard"></div>
+        <div class="engine-switch">
+          Αναγνώριση φωνής:
+          <button class="engine-btn ${engine === "whisper" ? "active" : ""}" data-engine="whisper">🎯 Ακριβής</button>
+          <button class="engine-btn ${engine === "google" ? "active" : ""}" data-engine="google"${SpeechRec ? "" : " disabled"}>⚡ Γρήγορη</button>
+        </div>
+        <div class="whisper-status" id="whisper-status">${engine === "whisper" ? whisperStatusText() : ""}</div>
       </div>
     </div>
 
     <div id="results-area"></div>`;
 }
 
-/* ── Speech recognition ─────────────────────────────────────────────────── */
+/* ── Speech recognition ─────────────────────────────────────────────────────
+ * Two engines:
+ *  whisper — Whisper "small" running in this browser (whisper-worker.js):
+ *            accurate, private, writes punctuation; needs a one-time download.
+ *  google  — the browser's own recogniser (Chrome/Edge): instant, but less
+ *            accurate for children's reading and sends audio to Google. */
+
+const canWhisper = typeof Worker !== "undefined" && !!window.MediaRecorder &&
+                   !!navigator.mediaDevices?.getUserMedia;
+
+function currentEngine() {
+  const saved = store.get("rp_engine", "whisper");
+  if (saved === "google" && SpeechRec) return "google";
+  return canWhisper ? "whisper" : (SpeechRec ? "google" : "whisper");
+}
+
+function canRecord(engine) {
+  return engine === "google" ? !!SpeechRec : canWhisper;
+}
+
+/* Whisper worker: started once, the model loads in the background */
+const whisper = { worker: null, status: "idle", pct: 0, loadedMB: 0, totalMB: 0,
+                  device: null, error: null, pending: new Map(), nextId: 1 };
+
+function startWhisper() {
+  if (!canWhisper || whisper.worker) return;
+  whisper.worker = new Worker("whisper-worker.js", { type: "module" });
+  whisper.status = "loading";
+  whisper.worker.onmessage = ({ data }) => {
+    if (data.type === "progress") {
+      Object.assign(whisper, { pct: data.pct, loadedMB: data.loadedMB, totalMB: data.totalMB });
+    } else if (data.type === "ready") {
+      Object.assign(whisper, { status: "ready", device: data.device, error: null });
+    } else if (data.type === "result") {
+      whisper.pending.get(data.id)?.resolve(data);
+      whisper.pending.delete(data.id);
+    } else if (data.type === "error") {
+      if (data.id && whisper.pending.has(data.id)) {
+        whisper.pending.get(data.id).reject(new Error(data.message));
+        whisper.pending.delete(data.id);
+      } else {
+        Object.assign(whisper, { status: "error", error: data.message });
+      }
+    }
+    const el = document.getElementById("whisper-status");
+    if (el && currentEngine() === "whisper") el.innerHTML = whisperStatusText();
+  };
+  whisper.worker.onerror = e => {
+    Object.assign(whisper, { status: "error", error: e.message || "worker" });
+    const el = document.getElementById("whisper-status");
+    if (el) el.innerHTML = whisperStatusText();
+  };
+  whisper.worker.postMessage({ type: "load" });
+}
+
+function whisperStatusText() {
+  if (!canWhisper) return "";
+  if (whisper.status === "ready")
+    return `✅ Έτοιμο${whisper.device === "webgpu" ? "" : " (χωρίς κάρτα γραφικών: θα αργεί λίγο)"}`;
+  if (whisper.status === "error")
+    return `⚠️ Δεν φόρτωσε η ακριβής αναγνώριση (${escapeHtml(whisper.error || "")}). Δοκίμασε τη «Γρήγορη».`;
+  const mb = whisper.totalMB ? ` · ${whisper.loadedMB}/${whisper.totalMB} MB` : "";
+  return `⏳ Φόρτωση εργαλείου φωνής: ${whisper.pct}%${mb} — μόνο την πρώτη φορά. Μπορείς να διαβάσεις ήδη.`;
+}
+
+function transcribeWithWhisper(audio) {
+  startWhisper();
+  return new Promise((resolve, reject) => {
+    const id = whisper.nextId++;
+    whisper.pending.set(id, { resolve, reject });
+    whisper.worker.postMessage({ type: "transcribe", id, audio });
+  });
+}
+
+async function decodeTo16k(blob) {
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  try {
+    const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+    if (buf.numberOfChannels === 1) return buf.getChannelData(0);
+    const a = buf.getChannelData(0), b = buf.getChannelData(1);
+    const mono = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) mono[i] = (a[i] + b[i]) / 2;
+    return mono;
+  } finally {
+    ctx.close();
+  }
+}
+
+/* Recording state shared by both engines */
 const rec = {
-  engine: null,
-  active: false,      // the child is reading (between start and stop clicks)
-  finals: [],
-  interim: "",
-  startTime: 0,
-  duration: 0,
-  timer: null,
-  countdown: null,
-  finishTimer: null,
-  error: null,
+  engine: null,       // "whisper" | "google" while a recording is open
+  active: false,      // the child is reading (between start and stop)
+  token: 0,           // bumps on every start/abort, so stale callbacks are ignored
+  media: null, chunks: [], stream: null,
+  speech: null, finals: [], interim: "", error: null,
+  startTime: 0, duration: 0,
+  timer: null, countdown: null, finishTimer: null,
 };
 
 function toggleRecording() {
@@ -420,31 +513,46 @@ function toggleRecording() {
   else startRecording();
 }
 
-function startRecording() {
-  if (!SpeechRec) return;
-  const btn = document.getElementById("record-btn");
-  const label = document.getElementById("record-label");
+async function startRecording() {
+  const engine = currentEngine();
+  if (!canRecord(engine)) return;
   document.getElementById("results-area").innerHTML = "";
-
-  rec.finals = [];
-  rec.interim = "";
-  rec.error = null;
-  rec.duration = 0;
-  rec.active = true;
-  rec.engine = makeEngine();
+  const token = ++rec.token;
+  Object.assign(rec, { engine, active: true, finals: [], interim: "", error: null,
+                       chunks: [], duration: 0 });
   try {
-    rec.engine.start();
+    if (engine === "whisper") {
+      startWhisper();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      if (token !== rec.token) { stream.getTracks().forEach(t => t.stop()); return; }
+      rec.stream = stream;
+      rec.media = new MediaRecorder(stream);
+      rec.media.ondataavailable = e => { if (e.data.size) rec.chunks.push(e.data); };
+      rec.media.onstop = () => { if (token === rec.token) finishWhisper(token); };
+      rec.media.start();
+    } else {
+      rec.speech = makeSpeechEngine(token);
+      rec.speech.start();
+    }
   } catch (e) {
     rec.active = false;
-    alert("Δεν ξεκίνησε η αναγνώριση φωνής: " + e.message);
+    rec.engine = null;
+    const msg = e.name === "NotAllowedError" ? speechErrorMessage("not-allowed") : e.message;
+    document.getElementById("results-area").innerHTML =
+      `<div class="card error-msg">${escapeHtml(msg)}</div>`;
     return;
   }
   rec.startTime = Date.now();
 
+  const btn = document.getElementById("record-btn");
+  const label = document.getElementById("record-label");
   btn.classList.add("recording");
   btn.innerHTML = "⏹";
   label.textContent = "Διαβάζεις... (πάτα για να σταματήσεις)";
   label.classList.add("rec");
+  document.querySelectorAll(".engine-btn").forEach(b => b.disabled = true);
 
   if (state.currentMode === "wpm") {
     let remaining = 60;
@@ -460,7 +568,7 @@ function startRecording() {
   }
 }
 
-function makeEngine() {
+function makeSpeechEngine(token) {
   const engine = new SpeechRec();
   engine.lang = "el-GR";
   engine.continuous = true;
@@ -469,7 +577,7 @@ function makeEngine() {
   const vocab = new Set(tokenize(state.currentText.content));
 
   engine.onresult = e => {
-    if (engine !== rec.engine) return;
+    if (token !== rec.token) return;
     let interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i];
@@ -490,7 +598,7 @@ function makeEngine() {
   };
 
   engine.onerror = e => {
-    if (engine !== rec.engine) return;
+    if (token !== rec.token) return;
     if (e.error === "no-speech" || e.error === "aborted") return;
     rec.error = e.error;
     if (e.error === "not-allowed" || e.error === "service-not-allowed" ||
@@ -503,12 +611,12 @@ function makeEngine() {
   // Chrome ends recognition on its own after a pause; keep listening until
   // the child presses stop.
   engine.onend = () => {
-    if (engine !== rec.engine) return;
+    if (token !== rec.token) return;
     if (rec.active) {
       if (rec.interim) { rec.finals.push(rec.interim); rec.interim = ""; }
       try { engine.start(); return; } catch {}
     }
-    finishRecording();
+    finishGoogle(token);
   };
   return engine;
 }
@@ -526,57 +634,120 @@ function stopRecording() {
   clearTimers();
   const label = document.getElementById("record-label");
   if (label) label.textContent = "Μια στιγμή...";
-  try { rec.engine.stop(); } catch { finishRecording(); }
-  // If the browser never reports the end, finish anyway.
-  rec.finishTimer = setTimeout(finishRecording, 4000);
+  if (rec.engine === "whisper") {
+    try { rec.media.stop(); } catch {}
+    rec.stream?.getTracks().forEach(t => t.stop());
+  } else {
+    const token = rec.token;
+    try { rec.speech.stop(); } catch { finishGoogle(token); }
+    // If the browser never reports the end, finish anyway.
+    rec.finishTimer = setTimeout(() => finishGoogle(token), 4000);
+  }
 }
 
 function abortRecording() {
   if (!rec.engine) return;
-  const engine = rec.engine;
-  rec.engine = null;
+  rec.token++;
   rec.active = false;
+  rec.engine = null;
   clearTimers();
   clearTimeout(rec.finishTimer);
-  try { engine.abort(); } catch {}
+  try { rec.speech?.abort(); } catch {}
+  try { if (rec.media?.state === "recording") rec.media.stop(); } catch {}
+  rec.stream?.getTracks().forEach(t => t.stop());
+  rec.speech = rec.media = rec.stream = null;
 }
 
-function finishRecording() {
-  clearTimeout(rec.finishTimer);
-  if (!rec.engine) return;            // already finished or aborted
-  rec.engine = null;
-  clearTimers();
-
+function resetRecordUi() {
   const btn = document.getElementById("record-btn");
   const label = document.getElementById("record-label");
-  const area = document.getElementById("results-area");
-  if (!btn || !area) return;
+  if (!btn) return false;
   btn.classList.remove("recording");
   btn.innerHTML = "🎙";
   label.classList.remove("rec");
   label.textContent = "Πάτα για να ξεκινήσεις";
   document.getElementById("live-heard").textContent = "";
+  document.querySelectorAll(".engine-btn").forEach(b => {
+    b.disabled = b.dataset.engine === "google" && !SpeechRec;
+  });
+  return true;
+}
+
+function showError(msg) {
+  const area = document.getElementById("results-area");
+  if (area) area.innerHTML = `<div class="card error-msg">${escapeHtml(msg)}</div>`;
+}
+
+async function finishWhisper(token) {
+  rec.engine = null;
+  rec.media = null;
+  rec.stream = null;
+  if (!resetRecordUi()) return;
+  const btn = document.getElementById("record-btn");
+  const area = document.getElementById("results-area");
+  if (!rec.duration) rec.duration = (Date.now() - rec.startTime) / 1000;
+  if (rec.duration < 1 || !rec.chunks.length) {
+    showError("Η ηχογράφηση ήταν πολύ σύντομη. Πάτα το 🎙, διάβασε και μετά πάτα ⏹.");
+    return;
+  }
+
+  btn.disabled = true;
+  const waitText = () => whisper.status === "ready"
+    ? "Ακούω την ανάγνωση... (λίγα δευτερόλεπτα)"
+    : "Περιμένω να φορτώσει το εργαλείο φωνής... " + whisper.pct + "%";
+  area.innerHTML = `
+    <div class="card processing-msg">
+      <div class="spinner"></div>
+      <div id="processing-text">${waitText()}</div>
+    </div>`;
+  const tick = setInterval(() => {
+    const el = document.getElementById("processing-text");
+    if (el) el.textContent = waitText();
+  }, 500);
+
+  try {
+    const audio = await decodeTo16k(new Blob(rec.chunks, { type: rec.chunks[0].type }));
+    const out = await transcribeWithWhisper(audio);
+    if (token !== rec.token || !document.getElementById("results-area")) return;
+    if (!out.text) {
+      showError("Δεν ακούστηκε τίποτα. Έλεγξε ότι το μικρόφωνο δουλεύει και διάβασε δυνατά.");
+      return;
+    }
+    scoreAndShow(out.text, true);
+  } catch (e) {
+    showError("Σφάλμα στην αναγνώριση φωνής: " + e.message + ". Δοκίμασε τη «Γρήγορη» αναγνώριση.");
+  } finally {
+    clearInterval(tick);
+    const b = document.getElementById("record-btn");
+    if (b) b.disabled = false;
+  }
+}
+
+function finishGoogle(token) {
+  clearTimeout(rec.finishTimer);
+  if (token !== rec.token || !rec.engine) return;   // already finished or aborted
+  rec.engine = null;
+  rec.speech = null;
+  clearTimers();
+  if (!resetRecordUi()) return;
 
   if (rec.interim) rec.finals.push(rec.interim);
   const transcribed = rec.finals.join(" ").replace(/\s+/g, " ").trim();
   if (!rec.duration) rec.duration = (Date.now() - rec.startTime) / 1000;
 
-  if (rec.error && !transcribed) {
-    area.innerHTML = `<div class="card error-msg">${escapeHtml(speechErrorMessage(rec.error))}</div>`;
-    return;
-  }
-  if (!transcribed) {
-    area.innerHTML = `<div class="card error-msg">Δεν ακούστηκε τίποτα. Έλεγξε ότι το μικρόφωνο δουλεύει και διάβασε δυνατά.</div>`;
-    return;
-  }
+  if (rec.error && !transcribed) return showError(speechErrorMessage(rec.error));
+  if (!transcribed)
+    return showError("Δεν ακούστηκε τίποτα. Έλεγξε ότι το μικρόφωνο δουλεύει και διάβασε δυνατά.");
+  scoreAndShow(transcribed, false);
+}
 
+function scoreAndShow(transcribed, withPunctuation) {
   const t = state.currentText;
   const crit = Object.entries(GRADE_CRITERIA).find(([k]) => t.source_id.startsWith(k))?.[1] || DEFAULT_CRITERIA;
   const scores = state.currentMode === "wpm"
     ? evaluateWpmMode(t.content, transcribed, rec.duration)
-    : evaluateReading(t.content, transcribed, rec.duration, crit);
+    : evaluateReading(t.content, transcribed, rec.duration, crit, withPunctuation);
 
-  const result = { ...scores, transcribed, mode: state.currentMode };
   saveSession({
     id: Date.now(),
     created_at: new Date().toISOString(),
@@ -587,6 +758,7 @@ function finishRecording() {
     mode: state.currentMode,
     word_accuracy: scores.word_accuracy,
     wpm: scores.wpm,
+    punctuation_score: scores.punctuation_score ?? null,
     overall_score: scores.overall_score,
     duration_sec: Math.round(rec.duration * 100) / 100,
     correct_words: scores.correct_words,
@@ -594,14 +766,14 @@ function finishRecording() {
     diff_tokens: scores.diff_tokens,
   });
   if (state.currentVolume) state.volumeStats = textStats(state.currentVolume.id);
-  showResults(result);
+  showResults({ ...scores, transcribed, mode: state.currentMode });
 }
 
 function speechErrorMessage(code) {
   if (code === "not-allowed" || code === "service-not-allowed")
     return "Ο browser δεν επιτρέπει το μικρόφωνο. Πάτα το εικονίδιο 🔒 δίπλα στη διεύθυνση και επίτρεψε το μικρόφωνο.";
   if (code === "audio-capture") return "Δεν βρέθηκε μικρόφωνο.";
-  if (code === "network") return "Η αναγνώριση φωνής χρειάζεται σύνδεση στο ίντερνετ.";
+  if (code === "network") return "Η γρήγορη αναγνώριση φωνής χρειάζεται σύνδεση στο ίντερνετ.";
   if (code === "language-not-supported") return "Ο browser δεν υποστηρίζει ελληνικά. Δοκίμασε Google Chrome.";
   return "Σφάλμα αναγνώρισης φωνής: " + code;
 }
@@ -757,6 +929,14 @@ function bindView() {
 
   document.getElementById("record-btn")?.addEventListener("click", toggleRecording);
 
+  document.querySelectorAll(".engine-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      store.set("rp_engine", btn.dataset.engine);
+      if (btn.dataset.engine === "whisper") startWhisper();
+      navigate("exercise");
+    });
+  });
+
   document.querySelectorAll(".history-item").forEach(item => {
     item.addEventListener("click", () => {
       const s = state.historySessions.find(x => String(x.id) === item.dataset.sid);
@@ -784,6 +964,11 @@ function renderScoreGrid(data) {
         <div class="score-val">${wpm.toFixed(0)}</div>
         <div class="score-lbl">Λέξ/λεπτό</div>
       </div>
+      ${data.punctuation_score != null && data.mode !== "wpm" ? `
+      <div class="score-card ${scoreClass(data.punctuation_score)}">
+        <div class="score-val">${data.punctuation_score.toFixed(0)}%</div>
+        <div class="score-lbl">Στίξη</div>
+      </div>` : ""}
       <div class="score-card">
         <div class="score-val">${data.correct_words ?? 0}</div>
         <div class="score-lbl">Σωστές λέξεις</div>
@@ -852,4 +1037,5 @@ function escapeAttr(str) {
 }
 
 /* ── Boot ───────────────────────────────────────────────────────────────── */
+if (state.user && currentEngine() === "whisper") startWhisper();
 render();

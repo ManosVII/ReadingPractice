@@ -237,20 +237,31 @@ function countCorrect(orig, trans) {
 
 const round1 = x => Math.round(x * 10) / 10;
 
+function punctuationScore(original, transcribed) {
+  const origMarks = (original.match(/[.!?;]/g) || []).length || 1;
+  const transMarks = (transcribed.match(/[.!?;]/g) || []).length;
+  return Math.max(0, 1 - Math.abs(1 - transMarks / origMarks));
+}
+
 function evaluateReading(original, transcribed, durationSeconds,
-                         { wpm_target = 80, w_spd = 0.30 } = {}) {
+                         { wpm_target = 80, w_acc = 0.60, w_spd = 0.30, w_pun = 0.10 } = {},
+                         scorePunctuation = true) {
   const orig = tokenize(original), trans = alignTranscript(orig, tokenize(transcribed));
   if (!orig.length) return { error: "Κενό κείμενο" };
   const correct = countCorrect(orig, trans);
   const accuracy = correct / orig.length;
   const wpm = durationSeconds > 0 ? correct / durationSeconds * 60 : 0;
   const speedNorm = Math.min(wpm / wpm_target, 1);
-  // The browser recogniser does not write punctuation, so punctuation is not
-  // scored here; its weight goes to accuracy.
-  const overall = accuracy * (1 - w_spd) + speedNorm * w_spd;
+  // Whisper writes punctuation, so it is scored as in evaluator.py. The
+  // Google recogniser does not; then its weight goes to accuracy.
+  const punct = scorePunctuation ? punctuationScore(original, transcribed) : null;
+  const overall = punct === null
+    ? accuracy * (1 - w_spd) + speedNorm * w_spd
+    : accuracy * w_acc + speedNorm * w_spd + punct * w_pun;
   return {
     word_accuracy: round1(accuracy * 100),
     wpm: round1(wpm),
+    punctuation_score: punct === null ? null : round1(punct * 100),
     overall_score: round1(overall * 100),
     correct_words: correct,
     total_words: orig.length,
