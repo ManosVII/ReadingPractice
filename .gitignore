@@ -1,0 +1,11 @@
+# Textbook PDFs (265 MB; free from ebooks.edu.gr, the extractor can download them)
+pdfs/
+
+# App data: accounts, practice sessions, backups. Only the texts-only database is shared.
+data/*
+!data/reading_new.db
+
+# Python / local settings
+__pycache__/
+*.pyc
+.env

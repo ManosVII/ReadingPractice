@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "description": "Ground truth for the reading-passage extractor. Each lesson was checked against rendered PDF pages (pdfs/ folder) and the PDF text layer. Pages are 1-based PDF page indices (the convention used by texts.page_number), not the printed page numbers.",
+  "matching_rules": {
+    "key": "Text is compared on a key that keeps only letters and digits (NFC, Latin look-alike capitals mapped to Greek, soft hyphens removed, case kept). first_words/last_words must be the start/end of the stored content.",
+    "lines": "For poems, the stored content must have exactly `lines` non-empty lines and `stanzas` blank-line-separated groups.",
+    "window": "Every DB row of this source whose page_number is inside the window must match an expected or optional passage, otherwise it is a false positive.",
+    "optional": "Optional passages are real texts that are embedded in an exercise or have no title. They may be absent (no false negative) or present with correct boundaries (no false positive).",
+    "forbidden": "Exercise/instruction text from the window. No row of this source may contain it.",
+    "global_forbidden": "Text that must not appear in any row of the whole database."
+  },
+  "global_forbidden": [
+    "Το προηγούμενο Σάβατο έφτασε στο σπίτι μας ένα γράμα",
+    "Διάβασε τι γράφουν οι καρτέλες",
+    "Παρατήρησε τα ημερολόγια. Είναι όλα ίδια",
+    "Μην ξεχάσετε να αναφέρετε",
+    "2NEO001"
+  ],
+  "lessons": [
+    {
+      "id": "A1", "class": "Α΄", "source_id": "a_dimotikou", "window": [60, 61],
+      "expected": [
+        {
+          "title": "Στο ζαχαροπλαστείο του Γλυκόσαυρου", "type": "poem", "pages": [61, 61],
+          "first_words": "― Πες μου πού να βρω", "last_words": "Δε μου πετυχαίνει.",
+          "attribution": "Μαριανίνα Κριεζή", "lines": 14, "stanzas": 3,
+          "must_not_contain": ["Μαριανίνα Κριεζή", "ραδιοφωνική εκπομπή"]
+        }
+      ],
+      "optional": [
+        {"pages": [60, 60], "first_words": "Ζάχαρη, ζύμη, παγωτά,", "last_words": "να τη μέσα στο καζάνι.", "reason": "untitled rhyme on a letter page (Ζ ζ, Υ υ)"}
+      ],
+      "forbidden": ["Τι δοκίμασε η γάτα", "Βάλε σε κύκλο"]
+    },
+    {
+      "id": "A2", "class": "Α΄", "source_id": "a_dimotikou_b", "window": [9, 10],
+      "expected": [
+        {
+          "title": "Το καπέλο περπατάει!", "type": "dialogue", "pages": [9, 9],
+          "first_words": "Άρης: Τι κάνει το σκυλάκι, Ιωάννα;", "last_words": "Τι άλλη ζαβολιά θα κάνει άραγε;",
+          "lines": 9,
+          "must_contain": ["Χθες πήρε το μολύβι μου"],
+          "must_not_contain": ["Ει ει"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Συμπλήρωσε τα ει", "Παρατηρήστε τις εικόνες", "χώρο για να παίξ"]
+    },
+    {
+      "id": "A3", "class": "Α΄", "source_id": "a_dimotikou_b", "window": [19, 19],
+      "expected": [
+        {
+          "title": "Οι δυο φίλοι", "type": "poem", "pages": [19, 19],
+          "first_words": "Ο σκύλος λέει της γάτας:", "last_words": "Συντρόφεψαν. Ειρήνη.",
+          "attribution": "Ζαχαρίας Παπαντωνίου", "lines": 23, "stanzas": 3,
+          "must_not_contain": ["....", "Βιβλιοθήκη Εκπαιδευτικού"]
+        }
+      ],
+      "optional": [],
+      "forbidden": []
+    },
+    {
+      "id": "B1", "class": "Β΄", "source_id": "b_dimotikou", "window": [18, 19],
+      "expected": [
+        {
+          "title": "Το κυλιόμενο πεζοδρόμιο", "type": "story", "pages": [19, 19],
+          "first_words": "Στον πλανήτη Μπεχ ανακάλυψαν", "last_words": "να τους την πάρει, παίρνει κλήση.",
+          "attribution": "Τζιάνι Ροντάρι, «Παραμύθια από το τηλέφωνο», εκδ. Τεκμήριο",
+          "paragraphs": 2
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Διάβασε το παρακάτω κείμενο", "Ποπό! Παντού κάτι είναι γραμμένο", "Συναντάς άλλες επιγραφές"]
+    },
+    {
+      "id": "B2", "class": "Β΄", "source_id": "b_dimotikou_b", "window": [17, 24],
+      "expected": [
+        {
+          "title": "Ιστορία για το τσίρκο", "type": "story", "pages": [18, 18],
+          "first_words": "Ώρα οχτώ ακριβώς.", "last_words": "— Κυρίες και κύριοι…",
+          "attribution": "Γιώργος Μαρίνος, «Ιστορία για το τσίρκο», εκδ. Κέδρος",
+          "must_contain": ["Κι όλο ρωτάνε τους δικούς τους πότε θ’ αρχίσει."]
+        },
+        {
+          "title": "H επανάσταση των παραμυθιών", "type": "story", "pages": [21, 21],
+          "first_words": "Ένα όμορφο φθινοπωριάτικο πρωί", "last_words": "όλοι πήδησαν μέσα, απέραντα ευτυχισμένοι.",
+          "attribution": "Ζωή Βαλάση, «Η επανάσταση των παραμυθιών», εκδ. Γνώση",
+          "must_contain": ["πίσω η Σταχτοπούτα, που κρατούσε"]
+        },
+        {
+          "title": "Πέντε ποντικοί", "type": "poem", "pages": [23, 23],
+          "first_words": "Στο σκοτάδι μαστορεύουν πέντε ποντικοί.", "last_words": "κι αφουγκράζεται τον κλέφτη, κι ώρες αγρυπνεί.",
+          "attribution": "Ζαχαρίας Παπαντωνίου", "lines": 8, "stanzas": 1
+        }
+      ],
+      "optional": [
+        {"pages": [17, 17], "first_words": "«Το σχολείο θα", "last_words": "της τάξης του».", "reason": "school notice inside the lesson picture"},
+        {"pages": [24, 24], "first_words": "— Βάγια, γιατί η δασκάλα", "last_words": "να γράφεις σωστά τη λέξη.", "reason": "untitled dialogue inside exercise 8"}
+      ],
+      "forbidden": ["Η Χαρά διαβάζει ένα ωραίο βιβλίο", "Έχεις πάει ποτέ σε τσίρκο", "Τώρα διάβασε το παρακάτω κείμενο", "Πού πηγαίνει η παραμυθένια συντροφιά", "Διάβασε δυνατά το παρακάτω ποίημα", "Μάθε να γράφεις σωστά"]
+    },
+    {
+      "id": "B3", "class": "Β΄", "source_id": "b_dimotikou_g", "window": [20, 22],
+      "expected": [
+        {
+          "title": "Πατρίδα", "type": "poem", "pages": [20, 20],
+          "first_words": "Μια άσπρη βαρκούλα μέσα στο κύμα", "last_words": "μα στην καρδιά μου όλη χωράς.",
+          "attribution": "Γιώργος Μαρίνος", "lines": 12, "stanzas": 3
+        },
+        {
+          "title": "Ελλάδα", "type": "poem", "pages": [20, 20],
+          "first_words": "Σκίνα, πεύκα και θυμάρια", "last_words": "κι έναν Όλυμπο όλο χιόνια.",
+          "attribution": "Μαρία Γουμενοπούλου", "lines": 14, "stanzas": 3,
+          "must_not_contain": ["Σπύρος Κουρσάρης"]
+        },
+        {
+          "title": "Το μήνυμα του Κολοκοτρώνη", "type": "story", "pages": [22, 22],
+          "first_words": "Κείνη την ώρα ξέφυγε από το πλάι της μάνας του", "last_words": "Έλα μαζί μου κι έχω δουλειά να σου δώσω.",
+          "attribution": "Σοφία Μαυροειδή-Παπαδάκη, «Το μήνυμα του Κολοκοτρώνη»",
+          "must_contain": ["– Τι είναι ορέ Ασημάκη;"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Διάβασε παρακάτω δύο από τα ποιήματα", "Μοιάζουν τα δύο ποιήματα", "Μιλά για ένα μικρό παιδί", "Γιατί ακολούθησε ο Ασημάκης", "Παρατήρησε τις λέξεις με τα μπλε"]
+    },
+    {
+      "id": "G1", "class": "Γ΄", "source_id": "g_dimotikou", "window": [11, 12],
+      "expected": [
+        {
+          "title": "Θαλασσινό σχολείο", "type": "poem", "pages": [11, 11],
+          "first_words": "Πώς θα ’θελα η θάλασσα", "last_words": "στη Γη να με γυρίζουν.",
+          "attribution": "Σοφία Παράσχου, Θαλασσινό σχολείο, εκδ. Περίπλους", "lines": 16, "stanzas": 4
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Κουβεντιάζω με το ποίημα", "Ποιες εικόνες ήρθαν", "Η δασκάλα ή ο δάσκαλος σας βοηθά", "Γράψε δίπλα από τις λέξεις", "Σε συνεργασία με τον διπλανό"]
+    },
+    {
+      "id": "G2", "class": "Γ΄", "source_id": "g_dimotikou_b", "window": [21, 26],
+      "expected": [
+        {
+          "title": "Ο χιονάνθρωπος και το κορίτσι", "type": "play", "pages": [21, 22],
+          "first_words": "Χειμώνας σε μια πλατεία.", "last_words": "Θα με ξαναφιλήσει; Τι λέτε;",
+          "attribution": "Αποσπάσματα από το θεατρικό του Ευγένιου Τριβιζά Το μεγάλο ταξίδι του Τουρτούρι, εκδ. Καστανιώτη",
+          "must_contain": ["Θανούλης: Kρύο που κάνει!", "Τουρτούρι: Θέλω λέει!..."],
+          "must_not_contain": ["αχνός: ατμός", "Αποσπάσματα από το θεατρικό"]
+        },
+        {
+          "title": "Κάτω απ’ το χιόνι", "type": "poem", "pages": [26, 26],
+          "first_words": "Σκέψου - τι πράματα γλυκά", "last_words": "«Ευχαριστώ» θα πει στα βράχια.",
+          "attribution": "Τέλλος Άγρας, Ανθολόγιο για τα παιδιά του Δημοτικού, μέρος δεύτερο, ΟΕΔΒ",
+          "lines": 16, "stanzas": 4
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Ξεκλειδώνω το κείμενο", "Τι απασχολεί τον χιονάνθρωπο", "Καταλαβαίνουμε ότι μιλάει", "Υπογράμμισε τους στίχους", "...ωσότου να της πει στο αυτί"]
+    },
+    {
+      "id": "G3", "class": "Γ΄", "source_id": "g_dimotikou_g", "window": [9, 11],
+      "expected": [
+        {
+          "title": "Τα ταξίδια του παππού μου", "type": "story", "pages": [9, 9],
+          "first_words": "Και τι δε μου έλεγε εμένα ο παππούλης μου", "last_words": "να ζούνε αυτοί καλά κι εμείς καλύτερα!",
+          "attribution": "Γεώργιος Βιζυηνός",
+          "must_contain": ["- Αχ, παππούλη, έλεγα μέσα μου,"],
+          "must_not_contain": ["αλαργινά: απομακρυσμένα", "(συνεχίζεται)"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Αρίθμησε τις παραγράφους", "Συμπλήρωσε τις φράσεις του κειμένου", "Ψάξε στο κείμενο για λέξεις", "Μια και δυο, ρ_ _ ω"]
+    },
+    {
+      "id": "D1", "class": "Δ΄", "source_id": "d_dimotikou", "window": [11, 12],
+      "expected": [
+        {
+          "title": "Ο Σεπτέμβρης", "type": "poem", "pages": [11, 11],
+          "first_words": "Ο Σεπτέμβρης είναι αγόρι", "last_words": "φίλους και συμμαθητές.",
+          "attribution": "Ρένα Καρθαίου, Στα μονοπάτια του ήλιου, εκδ. Πατάκη, Αθήνα, 2002",
+          "lines": 24, "stanzas": 8
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Κάθε χρόνο, την ίδια", "Το κείμενο που διαβάσατε είναι ένα ποίημα", "Βρείτε αυτές τις εικόνες"]
+    },
+    {
+      "id": "D2", "class": "Δ΄", "source_id": "d_dimotikou_b", "window": [9, 10],
+      "expected": [
+        {
+          "title": "Κορίτσι", "type": "poem", "pages": [9, 9],
+          "first_words": "Δύο συ και τρία γω,", "last_words": "πεταλούδα που δαγκάνει.",
+          "attribution": "Οδυσσέας Ελύτης, Ο ήλιος ο ηλιάτορας, εκδ. Ίκαρος, Αθήνα, 1971",
+          "lines": 16, "stanzas": 8,
+          "must_not_contain": ["πεντόβολα: παιδικό"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Παρακολουθήστε το παιχνίδι", "Νομίζετε ότι τα παιδιά βλέπουν"]
+    },
+    {
+      "id": "D3", "class": "Δ΄", "source_id": "d_dimotikou_g", "window": [21, 23],
+      "expected": [
+        {
+          "title": "Τρύπωνας ο φαφαγάλος", "type": "story", "pages": [21, 22],
+          "first_words": "Η κυρία Καλλιόπη έχει στο σπίτι της ένα καναρίνι", "last_words": "σε μαλώνουν κι αφοφάνω.",
+          "attribution": "Άννα Κωσταλλά, Τρύπωνας ο φαφαγάλος, εκδ. Πατάκη, Αθήνα, 2001 (διασκευή)",
+          "must_contain": ["γαλακτομπούρεκο, του λέει η κυρία Καλλιόπη και", "αλλά δεν κάνω φοτέ λάθη", "— Στο γου; ρωτάει χαριτωμένα ο Τρύφωνας."]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Συχνά διηγούμαστε", "αποφάσισε να αφήσει την κυρία Καλλιόπη", "Βάλτε το Χ στο κουτάκι"]
+    },
+    {
+      "id": "E1", "class": "Ε΄", "source_id": "e_dimotikou", "window": [13, 14],
+      "expected": [
+        {
+          "title": "Η φίλη μας η θάλασσα", "type": "informational", "pages": [13, 13],
+          "first_words": "Μεγάλη οικολογική καταστροφή στις ακτές της", "last_words": "προβλέπεται σταδιακή κατάργηση των πλοίων αυτών.",
+          "attribution": "εφημερίδα Ελευθεροτυπία, 19/11/02 (διασκευή)",
+          "must_contain": ["η διαρροή πετρελαίου από το δεξαμενόπλοιο", "οικολογικές καταστροφές της"],
+          "must_not_contain": ["άρθρο εφημερίδας"]
+        }
+      ],
+      "optional": [
+        {"pages": [13, 14], "first_words": "Πυρετώδεις προσπάθειες", "last_words": "όπου είχαν μολυνθεί 700 χιλιόμετρα ακτών.", "reason": "second article, introduced only by the label 'άρθρο στο διαδίκτυο:'"}
+      ],
+      "forbidden": ["Διαβάστε προσεκτικά τα δύο άρθρα", "Γράψτε σε 10 σειρές", "Βρείτε σε έναν χάρτη της Ευρώπης"]
+    },
+    {
+      "id": "E2", "class": "Ε΄", "source_id": "e_dimotikou_b", "window": [18, 19],
+      "expected": [
+        {
+          "title": "Αν όλα τα παιδιά της γης", "type": "poem", "pages": [18, 18],
+          "first_words": "Αν όλα τα παιδιά της γης πιάναν γερά τα χέρια", "last_words": "και τρεις φορές τη γη μας θ’ αγκάλιαζε θαρρώ.",
+          "attribution": "στίχοι: Γ. Ρίτσος", "lines": 24, "stanzas": 3
+        },
+        {
+          "title": "Τα μικρά παιδιά", "type": "poem", "pages": [18, 18],
+          "first_words": "Τα μικρά παιδιά, τα μικρά παιδιά, που κρατούνε στο χέρι τους", "last_words": "στην άκρη της γης. Τα μικρά παιδιά, τα μικρά παιδιά που κρατούνε στο χέρι τους σαν τον ήλιο τον χάρτινο τις ελπίδες μας...",
+          "attribution": "στίχοι και μουσική: Αρλέτα", "lines": 37, "stanzas": 8,
+          "must_contain_in_order": ["τον πιο όμορφο.", "Ένα φύλλο ή μια μέλισσα", "κόσμος, ζωή.", "Δυο κουτιά σπίρτων γίνηκαν"]
+        },
+        {
+          "title": "Μια βραδιά στο Πόρτο Λίλι", "type": "poem", "pages": [19, 19],
+          "first_words": "Μια βραδιά στο Πόρτο Λίλι, στα δρομάκια τα παλιά", "last_words": "τρεχαντήρια και τριζόνια. Μια βραδιά στο Πόρτο Λίλι, στα δρομάκια τα παλιά αντηχήσανε κιθάρες, μαντολίνα και βιολιά.",
+          "attribution": "στίχοι: Μ. Κριεζή", "lines": 20, "stanzas": 5
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Οι στίχοι των τριών ποιημάτων", "Ποιες εικόνες χρησιμοποιούν οι ποιητές", "Διαβάστε από το Ανθολόγιο"]
+    },
+    {
+      "id": "E3", "class": "Ε΄", "source_id": "e_dimotikou_g", "window": [29, 30],
+      "expected": [
+        {
+          "title": "Ανάσταση", "type": "poem", "pages": [29, 29],
+          "first_words": "Άκου τον ξάστερο ουρανό πώς οι καμπάνες σειούνε.", "last_words": "Ειρήνη! Ειρήνη! Φιληθείτε, οχτροί μαζί και φίλοι...",
+          "attribution": "Κώστας Βάρναλης", "lines": 8, "stanzas": 4
+        },
+        {
+          "title": "Μαριάμ", "type": "story", "pages": [30, 30],
+          "first_words": "Η Μαριάμ ένιωσε πως κάποιος μπήκε στην αυλή της", "last_words": "ο κόσμος έσβησε γύρω της κι έπεσε καταγής χωρίς πνοή.",
+          "attribution": "Αιμιλία Δάφνη, Μαριάμ, «Τα αγαπημένα μου διηγήματα»",
+          "must_contain": ["είδε μπροστά της τον Ιωάννη, που ανάσαινε με κομμένη αναπνοή"],
+          "must_not_contain": ["βυζαντινή εικόνα"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Πώς περιγράφεται η φύση", "Να συγκρίνετε το ποίημα", "Περιγράψτε με δικά σας λόγια", "Διαβάστε από το Ανθολόγιο"]
+    },
+    {
+      "id": "ST1", "class": "ΣΤ΄", "source_id": "st_dimotikou", "window": [12, 15],
+      "expected": [
+        {
+          "title": "Ταξιδεύοντας με ελέφαντα", "type": "story", "pages": [12, 14],
+          "first_words": "«Αν δεν έχετε αντίρρηση, θα πρότεινα", "last_words": "«Χρυσό τον πληρώνουμε αυτό τον ελέφαντα!»",
+          "attribution": "Ιούλιος Βερν, Ο γύρος του κόσμου σε 80 ημέρες, μετάφρ. M. Tζιαντζή, εκδ. Ερευνητές, Αθήνα, χ.χ. (διασκευή)",
+          "must_contain": ["«Όχι, την είχα προβλέψει».", "Δυστυχώς, οι ράγες πράγματι σταματούσαν.", "τίποτα δεν έχει χαθεί", "Ο κύριος Φογκ πλησίασε ξανά τον Ινδό"],
+          "must_not_contain": ["Το μυθιστόρημα του Ιουλίου Βερν", "Με τι θα ασχοληθούμε"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Βρείτε ποιες από τις φράσεις", "Θέλετε να διηγηθείτε", "Πώς αφηγούμαστε μια ιστορία"]
+    },
+    {
+      "id": "ST2", "class": "ΣΤ΄", "source_id": "st_dimotikou_b", "window": [33, 35],
+      "expected": [
+        {
+          "title": "Tα Χριστούγεννα του υπολογιστή", "type": "story", "pages": [33, 34],
+          "first_words": "Tο λογιστικό κέντρο ήταν άδειο και βουβό.", "last_words": "Xαμογέλασαν μ’ αυτά που έλεγε και συνέχισαν τη δουλειά τους.",
+          "attribution": "Aγγελική Bαρελλά, Mε ευχές, φλουριά και αγάπη, εκδ. Περίπλους, Αθήνα, 2000 (διασκευή)",
+          "must_contain": ["με τα χεράκια του ακούμπησε τον ASTRA 5603", "ήταν τυπωμένο ένα βουναλάκι", "O Nτίνος, ο χειριστής, νόμισε"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Aυτά που μόλις διαβάσατε", "Aπαντήστε στις παρακάτω ερωτήσεις", "Mπορείτε και εσείς να φτιάξετε"]
+    },
+    {
+      "id": "ST3", "class": "ΣΤ΄", "source_id": "st_dimotikou_g", "window": [29, 33],
+      "expected": [
+        {
+          "title": "Παιδικό Πάσχα", "type": "story", "pages": [29, 29],
+          "first_words": "Το Πάσχα άρχιζε απ’ την αυγή του Μεγάλου Σαββάτου", "last_words": "γινόταν το πρωί της Κυριακής.",
+          "attribution": "Γρηγόριος Ξενόπουλος, Παιδικό Πάσχα, «Ν. Εστία», τεύχος 592, 15/4/52",
+          "must_contain": ["που αποτελεί μια από", "Σαββάτου. Η αθηναϊκή", "έμενε στα πατροπαράδοτα", "σ’ όλες τις ζακυνθινές εκκλησίες"]
+        },
+        {
+          "title": "Το Μοιρολόγι της Παναγίας", "type": "poem", "pages": [31, 33],
+          "first_words": "Σήμερα μαύρος ουρανός, σήμερα μαύρη μέρα.", "last_words": "και δείξε την υπομονή, για να την κάνουν κι άλλοι.",
+          "attribution": "δημοτικό τραγούδι", "lines": 50, "stanzas": 25,
+          "must_not_contain": ["χαλκιάς: σιδεράς", "δημοτικό τραγούδι"]
+        }
+      ],
+      "optional": [],
+      "forbidden": ["Ποια εποχή γίνονταν", "Υπάρχει κάτι που σας κάνει", "Εσείς σε ποιο μέρος περνάτε"]
+    }
+  ]
+}

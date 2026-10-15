@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "description": "Spot-check lessons (2 per class) that are NOT in expected_passages.json. Checked against rendered PDF pages after the extractor was tuned on the ground truth. Same format and matching rules as expected_passages.json. Run: python tests/score_passages.py data/reading_new.db --gt tests/spot_checks.json --verbose",
+  "global_forbidden": [],
+  "lessons": [
+    {
+      "id": "A4", "class": "Α΄", "source_id": "a_dimotikou", "window": [45, 45],
+      "expected": [
+        {"title": "Το παπί", "type": "poem", "pages": [45, 45],
+         "first_words": "Μια φορά ένα Παπί", "last_words": "ένα Πάνινο Παπί.",
+         "attribution": "Παυλίνα Παμπούδη", "lines": 20, "stanzas": 5,
+         "must_contain": ["κι έλεγε όλο «Πα Πα Πα»."],
+         "must_not_contain": ["πιτσούνι: μικρό", "Παμπούδη"]}
+      ],
+      "optional": [], "forbidden": []
+    },
+    {
+      "id": "A5", "class": "Α΄", "source_id": "a_dimotikou_b", "window": [53, 53],
+      "expected": [
+        {"title": "Το κοτσύφι", "type": "story", "pages": [53, 53],
+         "first_words": "– Παιδιά, ελάτε γρήγορα, φωνάζει η Αγγελική.", "last_words": "το σφύριγμά τους ξέρουν ότι η άνοιξη πλησιάζει.",
+         "must_contain": ["Ένα πουλί! Ένα μικρό μαύρο πουλί!"],
+         "must_not_contain": ["Κι εγώ χαβγίζω"]}
+      ],
+      "optional": [], "forbidden": []
+    },
+    {
+      "id": "B4", "class": "Β΄", "source_id": "b_dimotikou", "window": [47, 48],
+      "expected": [
+        {"title": "Η κυρα-Καλή και οι δώδεκα μήνες", "type": "story", "pages": [47, 48],
+         "first_words": "Μια φορά κι έναν καιρό ζούσαν σ’ ένα χωριό δυο κυρούλες.", "last_words": "το άνοιξε και ήταν γεμάτο φλουριά.",
+         "attribution": "Λαϊκό παραμύθι",
+         "must_contain": ["για τους δώδεκα μήνες του χρόνου; Ποιον αγαπάς περισσότερο;"]}
+      ],
+      "optional": [],
+      "forbidden": ["Διάβασε τώρα ένα σύντομο παραμύθι", "Μπορείς να διηγηθείς το παραμύθι"]
+    },
+    {
+      "id": "B5", "class": "Β΄", "source_id": "b_dimotikou_b", "window": [41, 41],
+      "expected": [
+        {"title": "Η τελευταία επίσκεψη του Αϊ-Βασίλη", "type": "story", "pages": [41, 41],
+         "first_words": "Όταν ο αδελφός μου κι εγώ ήμασταν μικρά παιδιά", "last_words": "άφηνε τα δώρα μας δίπλα στο προσκέφαλό μας.",
+         "attribution": "Γεωργία Ανεζίνη-Λεράκη, «Η τελευταία επίσκεψη του Αϊ-Βασίλη», εκδ. Κέδρος"}
+      ],
+      "optional": [],
+      "forbidden": ["Η Γαλήνη διαβάζει το βιβλίο", "Στον τόπο σας τραγουδάτε κάλαντα"]
+    },
+    {
+      "id": "G4", "class": "Γ΄", "source_id": "g_dimotikou_b", "window": [9, 10],
+      "expected": [
+        {"title": "Η πόλη χάθηκε στο χιόνι", "type": "story", "pages": [9, 10],
+         "first_words": "Το πρωί εκείνο τον ξύπνησε η σιωπή.", "last_words": "από το πεζοδρόμιο στη μέση του δρόμου.",
+         "attribution": "(συνεχίζεται) Ίταλο Καλβίνο"}
+      ],
+      "optional": [],
+      "forbidden": ["Ο Μαρκοβάλντο κινείται σε μια πόλη"]
+    },
+    {
+      "id": "G5", "class": "Γ΄", "source_id": "g_dimotikou_g", "window": [45, 46],
+      "expected": [
+        {"title": "Ο Καραγκιόζης φούρναρης", "type": "play", "pages": [45, 46],
+         "first_words": "(Μουσική. Χορός του Καραγκιόζη με τα παιδιά του.)", "last_words": "Όποιος ψήσει σήμερα δε θα ξεψήσει.",
+         "attribution": "Απομαγνητοφωνημένο απόσπασμα από την παράσταση του Ευγένιου Σπαθάρη Ο Καραγκιόζης φούρναρης, Columbia",
+         "must_not_contain": ["Εξώφυλλο του", "μαλαγάνα: πονηρέ"]}
+      ],
+      "optional": [], "forbidden": ["Ξεκλειδώνω το κείμενο"]
+    },
+    {
+      "id": "D4", "class": "Δ΄", "source_id": "d_dimotikou", "window": [56, 57],
+      "expected": [
+        {"title": "Τα κάγκελα", "type": "poem", "pages": [56, 56],
+         "first_words": "Πίσω απ’ τα κάγκελα ελεύθεροι χιλιάδες", "last_words": "βήμα με βήμα την ελπίδα τη σκοτώνει.",
+         "attribution": "Κωστούλα Μητροπούλου", "lines": 12, "stanzas": 3}
+      ],
+      "optional": [], "forbidden": ["Το ποίημα γράφτηκε για τους αγωνιστές"]
+    },
+    {
+      "id": "D5", "class": "Δ΄", "source_id": "d_dimotikou_b", "window": [11, 13],
+      "expected": [
+        {"title": "Το μεγάλο μυστικό", "type": "story", "pages": [11, 12],
+         "first_words": "Μια παρέα παιδιών, με αρχηγό τον Κωσταντή", "last_words": "ήταν αρκετά μέτρα προς το άγνωστο.",
+         "attribution": "Μάρκος Κάβουρας, Το μεγάλο μυστικό, εκδ. Ελληνικά Γράμματα"}
+      ],
+      "optional": [], "forbidden": []
+    },
+    {
+      "id": "E4", "class": "Ε΄", "source_id": "e_dimotikou", "window": [69, 69],
+      "expected": [
+        {"title": "Μικρός τύμβος", "type": "poem", "pages": [69, 69],
+         "first_words": "Δίχως τουφέκι και σπαθί, με τον ήλιο στο μέτωπο,", "last_words": "μπροστά σ’ αυτό το Ποίημα μετράει μόνο η σιωπή.",
+         "attribution": "Νικηφόρος Βρεττάκος", "lines": 6, "stanzas": 3},
+        {"title": "Άγνωστος αγωνιστής", "type": "poem", "pages": [69, 69],
+         "first_words": "Η σφαίρα που σε σκότωσε", "last_words": "απάνω στον τάφο σου χτυπά.",
+         "attribution": "Κώστας Μόντης", "lines": 5, "stanzas": 1},
+        {"title": "Κοίτα με στα μάτια", "type": "poem", "pages": [69, 69],
+         "first_words": "Κοίτα με στα μάτια κι έλα πιο κοντά,", "last_words": "Γύρισε πίσω. Γύρισε πίσω.",
+         "attribution": "Νίκος Γκάτσος", "lines": 16, "stanzas": 4}
+      ],
+      "optional": [], "forbidden": ["Πώς καταλαβαίνετε τον στίχο"]
+    },
+    {
+      "id": "E5", "class": "Ε΄", "source_id": "e_dimotikou_g", "window": [84, 85],
+      "expected": [
+        {"title": "Φανταστικά ταξίδια στο διάστημα", "type": "story", "pages": [84, 85],
+         "first_words": "Ο Πότης Ράτος ζούσε στα 1880", "last_words": "που έμοιαζε όλο και περισσότερο με τη Γη.",
+         "attribution": "Ρένα Πετροπούλου"}
+      ],
+      "optional": [], "forbidden": ["Οι παρακάτω προτάσεις είναι ανακατεμένες"]
+    },
+    {
+      "id": "ST4", "class": "ΣΤ΄", "source_id": "st_dimotikou", "window": [73, 75],
+      "expected": [
+        {"title": "Eδώ Πολυτεχνείο", "type": "story", "pages": [73, 75],
+         "first_words": "«Eδώ Πολυτεχνείο!", "last_words": "Ξημέρωνε Σάββατο 17 του Nοέμβρη.",
+         "attribution": "Zωρζ Σαρή, Tα γενέθλια, εκδ. Κέδρος, Αθήνα, 1979",
+         "must_not_contain": ["κάμποτ: βαμβακερό"]}
+      ],
+      "optional": [], "forbidden": ["Το ποίημα αναφέρεται στις τρεις μέρες"]
+    },
+    {
+      "id": "ST5", "class": "ΣΤ΄", "source_id": "st_dimotikou_b", "window": [63, 65],
+      "expected": [
+        {"title": "Mε λένε Σόνια", "type": "story", "pages": [63, 65],
+         "first_words": "Στο διπλανό σπίτι, που είναι μονοκατοικία", "last_words": "Eγώ είμαι μετριόφρων.",
+         "attribution": "Mπέσση Λιβανού, Mε λένε Σόνια, εκδ. Kαστανιώτη, Αθήνα, 1997 (διασκευή)",
+         "must_contain": ["Oι πυροσβέστες ξεδίπλωσαν"],
+         "must_not_contain": ["Το αγαπημένο πεύκο της Σόνιας κινδυνεύει!", "Έρχεται η Πυροσβεστική!"]}
+      ],
+      "optional": [], "forbidden": ["H Σόνια είναι μια γάτα πραγματικά μετριόφρων"]
+    }
+  ]
+}
