@@ -465,14 +465,23 @@ function makeEngine() {
   engine.lang = "el-GR";
   engine.continuous = true;
   engine.interimResults = true;
-  engine.maxAlternatives = 1;
+  engine.maxAlternatives = 5;
+  const vocab = new Set(tokenize(state.currentText.content));
 
   engine.onresult = e => {
     if (engine !== rec.engine) return;
     let interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i];
-      if (r.isFinal) rec.finals.push(r[0].transcript);
+      if (r.isFinal) {
+        // Of the recogniser's guesses, keep the one closest to the text
+        let best = r[0].transcript, bestHits = vocabHits(best, vocab);
+        for (let k = 1; k < r.length; k++) {
+          const hits = vocabHits(r[k].transcript, vocab);
+          if (hits > bestHits) { best = r[k].transcript; bestHits = hits; }
+        }
+        rec.finals.push(best);
+      }
       else interim += r[0].transcript;
     }
     rec.interim = interim;
