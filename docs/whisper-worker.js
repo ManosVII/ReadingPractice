@@ -79,6 +79,70 @@ async function load(prefer) {
   }
 }
 
+const SR = 16000;
+
+// Cut points at the quietest 300 ms within 15–28 s of the previous cut
+function splitAtPauses(x, maxSec = 28, minSec = 15) {
+  const hop = 160, win = 30;                       // 10 ms frames, 300 ms window
+  const n = Math.floor(x.length / hop);
+  if (n * hop <= maxSec * SR) return [x];
+  const energy = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let j = i * hop; j < (i + 1) * hop; j++) s += x[j] * x[j];
+    energy[i] = s;
+  }
+  const smooth = new Float32Array(n);
+  let acc = 0;
+  for (let i = 0; i < n; i++) {
+    acc += energy[i];
+    if (i >= win) acc -= energy[i - win];
+    smooth[i] = acc;
+  }
+  const cuts = [0];
+  let start = 0;
+  while ((n - start) * hop > maxSec * SR) {
+    let best = start + maxSec * SR / hop, bestV = Infinity;
+    for (let i = start + minSec * SR / hop; i < start + maxSec * SR / hop; i++) {
+      if (smooth[i] < bestV) { bestV = smooth[i]; best = i - win / 2; }
+    }
+    start = Math.round(best);
+    cuts.push(start);
+  }
+  cuts.push(n);
+  const pieces = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    pieces.push(x.subarray(cuts[i] * hop, i + 2 === cuts.length ? x.length : cuts[i + 1] * hop));
+  }
+  return pieces;
+}
+
+function rms(x) {
+  let s = 0;
+  for (let i = 0; i < x.length; i++) s += x[i] * x[i];
+  return Math.sqrt(s / Math.max(1, x.length));
+}
+
+// Whisper sometimes gets stuck repeating a word or phrase ("το κουλίου, το
+// κουλίου, ..."). Keep at most three in a row, as texts have («Πα Πα Πα»).
+function collapseLoops(text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < words.length;) {
+    let skipped = false;
+    for (let len = 1; len <= 4 && !skipped; len++) {
+      if (out.length < 3 * len) continue;
+      const same = (a, b) => a.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase() === b.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+      const phrase = words.slice(i, i + len);
+      if (phrase.length < len) continue;
+      const prev = [1, 2, 3].map(r => out.slice(out.length - r * len, out.length - (r - 1) * len));
+      if (phrase.every((w, k) => prev.every(p => same(w, p[k])))) { i += len; skipped = true; }
+    }
+    if (!skipped) out.push(words[i++]);
+  }
+  return out.join(" ");
+}
+
 self.onmessage = async ({ data }) => {
   try {
     if (data.type === "load") {
@@ -87,14 +151,18 @@ self.onmessage = async ({ data }) => {
     } else if (data.type === "transcribe") {
       await load(data.device);
       const t0 = performance.now();
-      const out = await asr(data.audio, {
-        language: "greek",
-        task: "transcribe",
-        chunk_length_s: 30,
-        stride_length_s: 5,
-      });
+      // Whisper hears at most 30 s at a time. The pipeline's own chunking
+      // (chunk_length_s) dropped whole chunks of long readings, so the
+      // recording is cut at the quietest pauses and each piece is
+      // transcribed on its own.
+      const parts = [];
+      for (const piece of splitAtPauses(data.audio)) {
+        if (rms(piece) < 0.002) continue;          // silence: Whisper would invent text
+        const out = await asr(piece, { language: "greek", task: "transcribe" });
+        parts.push(collapseLoops((out.text || "").trim()));
+      }
       postMessage({
-        type: "result", id: data.id, text: (out.text || "").trim(),
+        type: "result", id: data.id, text: parts.filter(Boolean).join(" "),
         seconds: (performance.now() - t0) / 1000, device,
       });
     }
